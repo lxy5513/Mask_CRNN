@@ -21,6 +21,7 @@ import numpy as np
 import cv2
 import matplotlib
 import matplotlib.pyplot as plt
+matplotlib.use('agg')
 
 # Root directory of the project
 ROOT_DIR = os.path.abspath("../../")
