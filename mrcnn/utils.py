@@ -1,10 +1,6 @@
 """
 Mask R-CNN
 Common utility functions and classes.
-
-Copyright (c) 2017 Matterport, Inc.
-Licensed under the MIT License (see LICENSE for details)
-Written by Waleed Abdulla
 """
 
 import sys
@@ -21,7 +17,7 @@ import urllib.request
 import shutil
 import warnings
 
-# URL from which to download the latest COCO trained weights
+# URL from which to download the latest COCO trained weights ---------------------------------pre_train model !!!!!!
 COCO_MODEL_URL = "https://github.com/matterport/Mask_RCNN/releases/download/v2.0/mask_rcnn_coco.h5"
 
 
@@ -30,7 +26,8 @@ COCO_MODEL_URL = "https://github.com/matterport/Mask_RCNN/releases/download/v2.0
 ############################################################
 
 def extract_bboxes(mask):
-    """Compute bounding boxes from masks.
+    """
+    Compute bounding boxes from masks.
     mask: [height, width, num_instances]. Mask pixels are either 1 or 0.
 
     Returns: bbox array [num_instances, (y1, x1, y2, x2)].
@@ -39,6 +36,9 @@ def extract_bboxes(mask):
     for i in range(mask.shape[-1]):
         m = mask[:, :, i]
         # Bounding box.
+        # np.where 返回满足条件的
+        # np.any Test whether any array element along a given axis evaluates to true
+        # return single boolean unless axis is not None
         horizontal_indicies = np.where(np.any(m, axis=0))[0]
         vertical_indicies = np.where(np.any(m, axis=1))[0]
         if horizontal_indicies.shape[0]:
@@ -56,7 +56,9 @@ def extract_bboxes(mask):
 
 
 def compute_iou(box, boxes, box_area, boxes_area):
-    """Calculates IoU of the given box with the array of the given boxes.
+    """
+    一个定位精度评价公式：IOU。
+    Calculates IoU of the given box with the array of the given boxes.
     box: 1D vector [y1, x1, y2, x2]
     boxes: [boxes_count, (y1, x1, y2, x2)]
     box_area: float. the area of 'box'
@@ -65,7 +67,7 @@ def compute_iou(box, boxes, box_area, boxes_area):
     Note: the areas are passed in rather than calculated here for
     efficiency. Calculate once in the caller to avoid duplicate work.
     """
-    # Calculate intersection areas
+    # Calculate intersection areas 交叉区域
     y1 = np.maximum(box[0], boxes[:, 0])
     y2 = np.minimum(box[2], boxes[:, 2])
     x1 = np.maximum(box[1], boxes[:, 1])
@@ -77,7 +79,8 @@ def compute_iou(box, boxes, box_area, boxes_area):
 
 
 def compute_overlaps(boxes1, boxes2):
-    """Computes IoU overlaps between two sets of boxes.
+    """
+    Computes IoU overlaps between two sets of boxes.
     boxes1, boxes2: [N, (y1, x1, y2, x2)].
 
     For better performance, pass the largest set first and the smaller second.
@@ -118,9 +121,10 @@ def compute_overlaps_masks(masks1, masks2):
 
 
 def non_max_suppression(boxes, scores, threshold):
-    """Performs non-maximum suppression and returns indices of kept boxes.
-    boxes: [N, (y1, x1, y2, x2)]. Notice that (y2, x2) lays outside the box.
-    scores: 1-D array of box scores.
+    """
+    Performs non-maximum suppression非最大抑制 and returns indices of kept boxes.
+    boxes: [N, (y1, x1, y2, x2)]. Notice that (y2, x2) lays outside the box(在box外面）.
+    scores: 1-D array of box scores.  用于后面排序
     threshold: Float. IoU threshold to use for filtering.
     """
     assert boxes.shape[0] > 0
@@ -134,13 +138,14 @@ def non_max_suppression(boxes, scores, threshold):
     x2 = boxes[:, 3]
     area = (y2 - y1) * (x2 - x1)
 
-    # Get indicies of boxes sorted by scores (highest first)
+    # Get indicies of boxes sorted by scores (highest first)------------------sorted
     ixs = scores.argsort()[::-1]
 
     pick = []
     while len(ixs) > 0:
         # Pick top box and add its index to the list
         i = ixs[0]
+        # add the hightest scores box into list
         pick.append(i)
         # Compute IoU of the picked box with the rest
         iou = compute_iou(boxes[i], boxes[ixs[1:]], area[i], area[ixs[1:]])
@@ -153,7 +158,7 @@ def non_max_suppression(boxes, scores, threshold):
         ixs = np.delete(ixs, 0)
     return np.array(pick, dtype=np.int32)
 
-
+# delta 表示坐标框的变换信息
 def apply_box_deltas(boxes, deltas):
     """Applies the given deltas to the given boxes.
     boxes: [N, (y1, x1, y2, x2)]. Note that (y2, x2) is outside the box.
@@ -178,10 +183,13 @@ def apply_box_deltas(boxes, deltas):
     return np.stack([y1, x1, y2, x2], axis=1)
 
 
+# gt_box = get_training box
 def box_refinement_graph(box, gt_box):
-    """Compute refinement needed to transform box to gt_box.
+    """
+    Compute refinement needed to transform box to gt_box.
     box and gt_box are [N, (y1, x1, y2, x2)]
     """
+    # tf.cast() transfer data type
     box = tf.cast(box, tf.float32)
     gt_box = tf.cast(gt_box, tf.float32)
 
@@ -235,7 +243,7 @@ def box_refinement(box, gt_box):
 ############################################################
 
 class Dataset(object):
-    """The base class for dataset classes.
+    """The base class for dataset classes.-------------------basic class used for inherit and over
     To use it, create a new class that adds functions specific to the dataset
     you want to use. For example:
 
@@ -350,6 +358,7 @@ class Dataset(object):
         for i, info in enumerate(self.image_info):
             self.external_to_image_id[info["ds"] + str(info["id"])] = i
 
+    # @property 把一个方法变成属性调用 既能检查参数 又可以用类似属性这样的简单方式来访问类变量（直接设置成属性容易被外部篡改）
     @property
     def image_ids(self):
         return self._image_ids
@@ -375,7 +384,8 @@ class Dataset(object):
         return image
 
     def load_mask(self, image_id):
-        """Load instance masks for the given image.
+        """
+        Load instance masks for the given image.
 
         Different datasets use different ways to store masks. Override this
         method to load instance masks and return them in the form of am
@@ -394,7 +404,8 @@ class Dataset(object):
 
 
 def resize_image(image, min_dim=None, max_dim=None, min_scale=None, mode="square"):
-    """Resizes an image keeping the aspect ratio unchanged.
+    """
+    Resizes an image keeping the aspect ratio unchanged.
 
     min_dim: if provided, resizes the image such that it's smaller
         dimension == min_dim

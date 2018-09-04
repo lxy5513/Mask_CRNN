@@ -3,13 +3,9 @@
 
 # # Mask R-CNN - Train on Shapes Dataset
 # 
-# 
 # This notebook shows how to train Mask R-CNN on your own dataset. To keep things simple we use a synthetic dataset of shapes (squares, triangles, and circles) which enables fast training. You'd still need a GPU, though, because the network backbone is a Resnet101, which would be too slow to train on a CPU. On a GPU, you can start to get okay-ish results in a few minutes, and good results in less than an hour.
 # 
 # The code of the *Shapes* dataset is included below. It generates images on the fly, so it doesn't require downloading any data. And it can generate images of any size, so we pick a small image size to train faster. 
-
-# In[ ]:
-
 
 import os
 import sys
@@ -21,6 +17,7 @@ import numpy as np
 import cv2
 import matplotlib
 import matplotlib.pyplot as plt
+# prohibit image display
 matplotlib.use('agg')
 
 # Root directory of the project
@@ -47,12 +44,9 @@ if not os.path.exists(COCO_MODEL_PATH):
 
 
 # ## Configurations
-
-# In[2]:
-
-
 class ShapesConfig(Config):
-    """Configuration for training on the toy shapes dataset.
+    """
+    Configuration for training on the toy shapes dataset.
     Derives from the base Config class and overrides values specific
     to the toy shapes dataset.
     """
@@ -64,15 +58,16 @@ class ShapesConfig(Config):
     GPU_COUNT = 1
     IMAGES_PER_GPU = 8
 
-    # Number of classes (including background)
+    # Number of classes (including background)--------------------------------Nums of classes
     NUM_CLASSES = 1 + 3  # background + 3 shapes
 
     # Use small images for faster training. Set the limits of the small side
-    # the large side, and that determines the image shape.
+    # the large side, and that determines the image shape.----------------Images Limit
     IMAGE_MIN_DIM = 128
     IMAGE_MAX_DIM = 128
 
     # Use smaller anchors because our image and objects are small
+    # ???????????????
     RPN_ANCHOR_SCALES = (8, 16, 32, 64, 128)  # anchor side in pixels
 
     # Reduce training ROIs per image because the images are small and have
@@ -83,19 +78,15 @@ class ShapesConfig(Config):
     STEPS_PER_EPOCH = 100
 
     # use small validation steps since the epoch is small
+    # ??????????????????????????????????
     VALIDATION_STEPS = 5
     
 config = ShapesConfig()
 config.display()
 
 
-# ## Notebook Preferences
-
-# In[3]:
-
-
 def get_ax(rows=1, cols=1, size=8):
-    """Return a Matplotlib Axes array to be used in
+    """Return a Matplotlib Axes(轴线) array to be used in
     all visualizations in the notebook. Provide a
     central point to control graph sizes.
     
@@ -107,26 +98,25 @@ def get_ax(rows=1, cols=1, size=8):
 
 
 # ## Dataset
-# 
-# Create a synthetic dataset
-# 
+# Create a synthetic dataset 合成数据
 # Extend the Dataset class and add a method to load the shapes dataset, `load_shapes()`, and override the following methods:
-# 
 # * load_image()
 # * load_mask()
 # * image_reference()
 
-# In[4]:
-
 
 class ShapesDataset(utils.Dataset):
-    """Generates the shapes synthetic dataset. The dataset consists of simple
+    """
+    用pre_train model 训练自己的数据集 （这里的数据集图片是自己合成的）------------------------------------训练
+
+    Generates the shapes synthetic dataset. The dataset consists of simple
     shapes (triangles, squares, circles) placed randomly on a blank surface.
     The images are generated on the fly. No file access required.
+    图像是在运行中生成的。 无需文件访
     """
-
+    # 每张图片的大小都必须一样的吗？？
     def load_shapes(self, count, height, width):
-        """Generate the requested number of synthetic images.
+        """Generate the requested number of synthetic images 合成图像.
         count: number of images to generate.
         height, width: the size of the generated images.
         """
@@ -137,10 +127,12 @@ class ShapesDataset(utils.Dataset):
 
         # Add images
         # Generate random specifications of images (i.e. color and
-        # list of shapes sizes and locations). This is more compact than
+        # list of shapes sizes and locations). This is more compact紧凑 than
         # actual images. Images are generated on the fly in load_image().
         for i in range(count):
             bg_color, shapes = self.random_image(height, width)
+
+            # the definition of fun add_image is ???????????????????
             self.add_image("shapes", image_id=i, path=None,
                            width=width, height=height,
                            bg_color=bg_color, shapes=shapes)
@@ -151,10 +143,12 @@ class ShapesDataset(utils.Dataset):
         in this case it generates the image on the fly from the
         specs in image_info.
         """
+        # ???????????????????????????
         info = self.image_info[image_id]
         bg_color = np.array(info['bg_color']).reshape([1, 1, 3])
         image = np.ones([info['height'], info['width'], 3], dtype=np.uint8)
         image = image * bg_color.astype(np.uint8)
+
         for shape, color, dims in info['shapes']:
             image = self.draw_shape(image, shape, dims, color)
         return image
@@ -206,9 +200,9 @@ class ShapesDataset(utils.Dataset):
         """Generates specifications of a random shape that lies within
         the given height and width boundaries.
         Returns a tuple of three valus:
-        * The shape name (square, circle, ...)
-        * Shape color: a tuple of 3 values, RGB.
-        * Shape dimensions: A tuple of values that define the shape size
+        * The shape name (square, circle, ...) ----------------------------------------
+        * Shape color: a tuple of 3 values, RGB.----------------------------------------------
+        * Shape dimensions: A tuple of values that define the shape size---------------------------
                             and location. Differs per shape type.
         """
         # Shape
@@ -243,14 +237,12 @@ class ShapesDataset(utils.Dataset):
         # Apply non-max suppression wit 0.3 threshold to avoid
         # shapes covering each other
         keep_ixs = utils.non_max_suppression(np.array(boxes), np.arange(N), 0.3)
-        shapes = [s for i, s in enumerate(shapes) if i in keep_ixs]
+        shapes = [s for i, s in enumerate(shapes) if i in keep_ixs] # ----------------------------------
         return bg_color, shapes
 
 
-# In[5]:
 
-
-# Training dataset
+# Training dataset ---------------------------------训练的那一步在哪呢？？？？？？？？
 dataset_train = ShapesDataset()
 dataset_train.load_shapes(500, config.IMAGE_SHAPE[0], config.IMAGE_SHAPE[1])
 dataset_train.prepare()
@@ -260,8 +252,6 @@ dataset_val = ShapesDataset()
 dataset_val.load_shapes(50, config.IMAGE_SHAPE[0], config.IMAGE_SHAPE[1])
 dataset_val.prepare()
 
-
-# In[6]:
 
 
 # Load and display random samples
@@ -274,15 +264,9 @@ for image_id in image_ids:
 
 # ## Ceate Model
 
-# In[ ]:
-
-
 # Create model in training mode
 model = modellib.MaskRCNN(mode="training", config=config,
                           model_dir=MODEL_DIR)
-
-
-# In[7]:
 
 
 # Which weights to start with?
@@ -303,16 +287,16 @@ elif init_with == "last":
 
 
 # ## Training
-# 
 # Train in two stages:
-# 1. Only the heads. Here we're freezing all the backbone layers and training only the randomly initialized layers (i.e. the ones that we didn't use pre-trained weights from MS COCO). To train only the head layers, pass `layers='heads'` to the `train()` function.
-# 
-# 2. Fine-tune all layers. For this simple example it's not necessary, but we're including it to show the process. Simply pass `layers="all` to train all layers.
+# 1. Only the heads. Here we're freezing all the backbone layers and training only the randomly initialized layers (i.e.
+#  the ones that we didn't use pre-trained weights from MS COCO). To train only the head layers, pass `layers='heads'` to
+#  the `train()` function.
 
-# In[8]:
+# 2. Fine-tune all layers. For this simple example it's not necessary, but we're including it to show the process. Simply
+# pass `layers="all` to train all layers.
 
 
-# Train the head branches
+# -----------------------------------------------------------Train the head branches
 # Passing layers="heads" freezes all layers except the head
 # layers. You can also pass a regular expression to select
 # which layers to train by name pattern.
@@ -322,10 +306,7 @@ model.train(dataset_train, dataset_val,
             layers='heads')
 
 
-# In[9]:
-
-
-# Fine tune all layers
+#------------------------------------------------------------ Fine tune all layers
 # Passing layers="all" trains all layers. You can also 
 # pass a regular expression to select which layers to
 # train by name pattern.
@@ -333,9 +314,6 @@ model.train(dataset_train, dataset_val,
             learning_rate=config.LEARNING_RATE / 10,
             epochs=2, 
             layers="all")
-
-
-# In[10]:
 
 
 # Save weights
@@ -346,9 +324,6 @@ model.train(dataset_train, dataset_val,
 
 
 # ## Detection
-
-# In[11]:
-
 
 class InferenceConfig(ShapesConfig):
     GPU_COUNT = 1
@@ -371,12 +346,9 @@ print("Loading weights from ", model_path)
 model.load_weights(model_path, by_name=True)
 
 
-# In[12]:
-
-
 # Test on a random image
 image_id = random.choice(dataset_val.image_ids)
-original_image, image_meta, gt_class_id, gt_bbox, gt_mask =    modellib.load_image_gt(dataset_val, inference_config, 
+original_image, image_meta, gt_class_id, gt_bbox, gt_mask = modellib.load_image_gt(dataset_val, inference_config,
                            image_id, use_mini_mask=False)
 
 log("original_image", original_image)
@@ -389,9 +361,6 @@ visualize.display_instances(original_image, gt_bbox, gt_mask, gt_class_id,
                             dataset_train.class_names, figsize=(8, 8))
 
 
-# In[13]:
-
-
 results = model.detect([original_image], verbose=1)
 
 r = results[0]
@@ -400,9 +369,6 @@ visualize.display_instances(original_image, r['rois'], r['masks'], r['class_ids'
 
 
 # ## Evaluation
-
-# In[14]:
-
 
 # Compute VOC-Style mAP @ IoU=0.5
 # Running on 10 images. Increase for better accuracy.

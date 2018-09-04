@@ -2,10 +2,6 @@
 Mask R-CNN
 Train on the toy Balloon dataset and implement color splash effect.
 
-Copyright (c) 2018 Matterport, Inc.
-Licensed under the MIT License (see LICENSE for details)
-Written by Waleed Abdulla
-
 ------------------------------------------------------------
 
 Usage: import the module (see Jupyter notebooks for examples), or run from
@@ -82,8 +78,9 @@ class BalloonConfig(Config):
 class BalloonDataset(utils.Dataset):
 
     def load_balloon(self, dataset_dir, subset):
-        """Load a subset of the Balloon dataset.
-        dataset_dir: Root directory of the dataset.
+        """
+        Load a subset of the Balloon dataset.
+        dataset_dir: Root directory of the dataset.----------------------train or val
         subset: Subset to load: train or val
         """
         # Add classes. We have only one class to add.
@@ -140,7 +137,7 @@ class BalloonDataset(utils.Dataset):
         """Generate instance masks for an image.
        Returns:
         masks: A bool array of shape [height, width, instance count] with
-            one mask per instance.
+            one mask per instance.----------------------------------------------------这数个三维数组(tensor)吗
         class_ids: a 1D array of class IDs of the instance masks.
         """
         # If not a balloon dataset image, delegate to parent class.
@@ -192,7 +189,7 @@ def train(model):
                 learning_rate=config.LEARNING_RATE,
                 epochs=30,
                 layers='heads')
-
+# --------------------------------------------------------------------------------------------- 重新训练
 
 def color_splash(image, mask):
     """Apply color splash effect.

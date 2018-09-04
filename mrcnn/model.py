@@ -1,10 +1,6 @@
 """
 Mask R-CNN
 The main Mask R-CNN model implementation.
-
-Copyright (c) 2017 Matterport, Inc.
-Licensed under the MIT License (see LICENSE for details)
-Written by Waleed Abdulla
 """
 
 import os
@@ -16,6 +12,8 @@ import logging
 from collections import OrderedDict
 import multiprocessing
 import numpy as np
+# skimage put image as array to opreate/handle
+# transform 几何变换 如旋转 拉伸
 import skimage.transform
 import tensorflow as tf
 import keras
@@ -37,10 +35,12 @@ assert LooseVersion(keras.__version__) >= LooseVersion('2.0.8')
 ############################################################
 
 def log(text, array=None):
-    """Prints a text message. And, optionally, if a Numpy array is provided it
+    """
+    Prints a text message. And, optionally, if a Numpy array is provided it
     prints it's shape, min, and max values.
     """
     if array is not None:
+        # set left just, use blank to fill/pad if num > len(text)
         text = text.ljust(25)
         text += ("shape: {:20}  min: {:10.5f}  max: {:10.5f}  {}".format(
             str(array.shape),
@@ -51,9 +51,11 @@ def log(text, array=None):
 
 
 class BatchNorm(KL.BatchNormalization):
-    """Extends the Keras BatchNormalization class to allow a central place
+    """
+    Extends the Keras BatchNormalization class to allow a central place
     to make changes if needed.
 
+    对网络中每一层的神经单元输入 计算均值和方差后再进行normlization
     Batch normalization has a negative effect on training if batches are small
     so this layer is often frozen (via setting in Config class) and functions
     as linear layer.
@@ -62,14 +64,15 @@ class BatchNorm(KL.BatchNormalization):
         """
         Note about training values:
             None: Train BN layers. This is the normal mode
-            False: Freeze BN layers. Good when batch size is small
+            False: Freeze BN layers. Good when batch size is small ----------------------------------Train
             True: (don't use). Set layer in training mode even when making inferences
         """
         return super(self.__class__, self).call(inputs, training=training)
 
 
 def compute_backbone_shapes(config, image_shape):
-    """Computes the width and height of each stage of the backbone network.
+    """
+    Computes the width and height of each stage of the backbone network.
     
     Returns:
         [N, (height, width)]. Where N is the number of stages
@@ -77,7 +80,7 @@ def compute_backbone_shapes(config, image_shape):
     if callable(config.BACKBONE):
         return config.COMPUTE_BACKBONE_SHAPE(image_shape)
 
-    # Currently supports ResNet only
+    # Currently supports ResNet only ---------------------------------
     assert config.BACKBONE in ["resnet50", "resnet101"]
     return np.array(
         [[int(math.ceil(image_shape[0] / stride)),
@@ -94,15 +97,17 @@ def compute_backbone_shapes(config, image_shape):
 
 def identity_block(input_tensor, kernel_size, filters, stage, block,
                    use_bias=True, train_bn=True):
-    """The identity_block is the block that has no conv layer at shortcut
+    """
+    The identity_block is the block that has no conv layer at shortcut
     # Arguments
         input_tensor: input tensor
-        kernel_size: default 3, the kernel size of middle conv layer at main path
-        filters: list of integers, the nb_filters of 3 conv layer at main path
+        kernel_size: default 3, the kernel size of middle conv layer at main path------------------卷积的kernel大小
+        filters: list of integers, the nb_filters of 3 conv layer at main path-----------每个卷积层的输出大小，内部cell个数
         stage: integer, current stage label, used for generating layer names
         block: 'a','b'..., current block label, used for generating layer names
         use_bias: Boolean. To use or not use a bias in conv layers.
         train_bn: Boolean. Train or freeze Batch Norm layers
+        stage block 用于产生model layer name 以便于后面的调用
     """
     nb_filter1, nb_filter2, nb_filter3 = filters
     conv_name_base = 'res' + str(stage) + block + '_branch'
@@ -169,7 +174,8 @@ def conv_block(input_tensor, kernel_size, filters, stage, block,
 
 
 def resnet_graph(input_image, architecture, stage5=False, train_bn=True):
-    """Build a ResNet graph.
+    """
+        Build a ResNet graph.
         architecture: Can be resnet50 or resnet101
         stage5: Boolean. If False, stage5 of the network is not created
         train_bn: Boolean. Train or freeze Batch Norm layers
@@ -223,6 +229,7 @@ def apply_box_deltas_graph(boxes, deltas):
     # Apply deltas
     center_y += deltas[:, 0] * height
     center_x += deltas[:, 1] * width
+    # 计算e的次方
     height *= tf.exp(deltas[:, 2])
     width *= tf.exp(deltas[:, 3])
     # Convert back to y1, x1, y2, x2
@@ -230,6 +237,7 @@ def apply_box_deltas_graph(boxes, deltas):
     x1 = center_x - 0.5 * width
     y2 = y1 + height
     x2 = x1 + width
+    # 矩阵拼接函数
     result = tf.stack([y1, x1, y2, x2], axis=1, name="apply_box_deltas_out")
     return result
 
@@ -1192,7 +1200,8 @@ def mrcnn_mask_loss_graph(target_masks, target_class_ids, pred_masks):
 
 def load_image_gt(dataset, config, image_id, augment=False, augmentation=None,
                   use_mini_mask=False):
-    """Load and return ground truth data for an image (image, mask, bounding boxes).
+    """
+    Load and return ground truth data for an image (image, mask, bounding boxes).
 
     augment: (deprecated. Use augmentation instead). If true, apply random
         image augmentation. Currently, only horizontal flipping is offered.
@@ -1203,7 +1212,7 @@ def load_image_gt(dataset, config, image_id, augment=False, augmentation=None,
         and width as the original image. These can be big, for example
         1024x1024x100 (for 100 instances). Mini masks are smaller, typically,
         224x224 and are generated by extracting the bounding box of the
-        object and resizing it to MINI_MASK_SHAPE.
+        object and resizing it to MINI_MASK_SHAPE.-------------------------------- resize the bounding box
 
     Returns:
     image: [height, width, 3]
@@ -1826,7 +1835,9 @@ def data_generator(dataset, config, shuffle=True, augment=False, augmentation=No
 ############################################################
 
 class MaskRCNN():
-    """Encapsulates the Mask RCNN model functionality.
+    """
+    封装
+    Encapsulates the Mask RCNN model functionality.
 
     The actual Keras model is in the keras_model property.
     """
@@ -2145,7 +2156,8 @@ class MaskRCNN():
         self.set_log_dir(filepath)
 
     def get_imagenet_weights(self):
-        """Downloads ImageNet trained weights from Keras.
+        """
+        Downloads ImageNet trained weights from Keras.
         Returns path to weights file.
         """
         from keras.utils.data_utils import get_file
@@ -2486,8 +2498,10 @@ class MaskRCNN():
 
         return boxes, class_ids, scores, full_masks
 
+    # 返回一个list , every item is a dictionary
     def detect(self, images, verbose=0):
-        """Runs the detection pipeline.
+        """
+        Runs the detection pipeline.----------------------------------------------------预测函数， 靠它来得到结果
 
         images: List of images, potentially of different sizes.
 

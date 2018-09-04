@@ -2,16 +2,12 @@
 Mask R-CNN
 Base Configurations class.
 
-Copyright (c) 2017 Matterport, Inc.
-Licensed under the MIT License (see LICENSE for details)
-Written by Waleed Abdulla
 """
 
 import numpy as np
 
-
 # Base Configuration Class
-# Don't use this class directly. Instead, sub-class it and override
+# Don't use this class directly. Instead, sub-class it and override -----------------inherit and override
 # the configurations you need to change.
 
 class Config(object):
@@ -22,15 +18,15 @@ class Config(object):
     # Name the configurations. For example, 'COCO', 'Experiment 3', ...etc.
     # Useful if your code needs to do things differently depending on which
     # experiment is running.
-    NAME = None  # Override in sub-classes
+    NAME = None  # Override in sub-classes----------------------Name
 
-    # NUMBER OF GPUs to use. For CPU training, use 1
+    # NUMBER OF GPUs to use. For CPU training, use 1 ------------------GPU nums
     GPU_COUNT = 1
 
     # Number of images to train with on each GPU. A 12GB GPU can typically
     # handle 2 images of 1024x1024px.
     # Adjust based on your GPU memory and image sizes. Use the highest
-    # number that your GPU can handle for best performance.
+    # number that your GPU can handle for best performance. -------------------
     IMAGES_PER_GPU = 2
 
     # Number of training steps per epoch
@@ -39,19 +35,22 @@ class Config(object):
     # smaller number means getting more frequent TensorBoard updates.
     # Validation stats are also calculated at each epoch end and they
     # might take a while, so don't set this too small to avoid spending
-    # a lot of time on validation stats.
+    # a lot of time on validation stats.------------------------------------don't set it too small
     STEPS_PER_EPOCH = 1000
 
     # Number of validation steps to run at the end of every training epoch.
     # A bigger number improves accuracy of validation stats, but slows
-    # down the training.
+    # down the training.---------------------------
     VALIDATION_STEPS = 50
 
+    # RESNET 使用了一种叫做shortcut connection连接方式 叫做深度残差网络 可以解决 随着
+    # 网络加深 准确率不下降的 问题    比VGG16更好用  need 12G memory GPU
     # Backbone network architecture
     # Supported values are: resnet50, resnet101.
     # You can also provide a callable that should have the signature
     # of model.resnet_graph. If you do so, you need to supply a callable
     # to COMPUTE_BACKBONE_SHAPE as well
+    # resnet 101指的是卷积层和全连接层加起来是101层
     BACKBONE = "resnet101"
 
     # Only useful if you supply a callable to BACKBONE. Should compute
@@ -59,8 +58,8 @@ class Config(object):
     # See model.compute_backbone_shapes
     COMPUTE_BACKBONE_SHAPE = None
 
-    # The strides of each layer of the FPN Pyramid. These values
-    # are based on a Resnet101 backbone.
+    # The strides of each layer of the FPN Pyramid. -------------------------------- feature pyramid network
+    # These values are based on a Resnet101 backbone.
     BACKBONE_STRIDES = [4, 8, 16, 32, 64]
 
     # Size of the fully-connected layers in the classification graph
@@ -70,12 +69,12 @@ class Config(object):
     TOP_DOWN_PYRAMID_SIZE = 256
 
     # Number of classification classes (including background)
-    NUM_CLASSES = 1  # Override in sub-classes
+    NUM_CLASSES = 1  # -------------------------------------------------Override in sub-classes
 
-    # Length of square anchor side in pixels
+    # Length of square anchor side in pixels---------------???????
     RPN_ANCHOR_SCALES = (32, 64, 128, 256, 512)
 
-    # Ratios of anchors at each cell (width/height)
+    # Ratios of anchors at each cell (width/height)  比率
     # A value of 1 represents a square anchor, and 0.5 is a wide anchor
     RPN_ANCHOR_RATIOS = [0.5, 1, 2]
 
@@ -84,7 +83,7 @@ class Config(object):
     # If 2, then anchors are created for every other cell, and so on.
     RPN_ANCHOR_STRIDE = 1
 
-    # Non-max suppression threshold to filter RPN proposals.
+    # Non-max suppression threshold to filter RPN proposals.  ---------------the rate of filter proposal
     # You can increase this during training to generate more propsals.
     RPN_NMS_THRESHOLD = 0.7
 
@@ -95,7 +94,7 @@ class Config(object):
     POST_NMS_ROIS_TRAINING = 2000
     POST_NMS_ROIS_INFERENCE = 1000
 
-    # If enabled, resizes instance masks to a smaller size to reduce
+    # If enabled, resizes instance masks to a smaller size to reduce----------------------------
     # memory load. Recommended when using high-resolution images.
     USE_MINI_MASK = True
     MINI_MASK_SHAPE = (56, 56)  # (height, width) of the mini-mask
@@ -109,17 +108,22 @@ class Config(object):
     # in one batch.
     # Available resizing modes:
     # none:   No resizing or padding. Return the image unchanged.
+
     # square: Resize and pad with zeros to get a square image
     #         of size [max_dim, max_dim].
+
     # pad64:  Pads width and height with zeros to make them multiples of 64.
     #         If IMAGE_MIN_DIM or IMAGE_MIN_SCALE are not None, then it scales
-    #         up before padding. IMAGE_MAX_DIM is ignored in this mode.
+    #         up 放大 before padding填充. IMAGE_MAX_DIM is ignored in this mode.
     #         The multiple of 64 is needed to ensure smooth scaling of feature
     #         maps up and down the 6 levels of the FPN pyramid (2**6=64).
+
     # crop:   Picks random crops from the image. First, scales the image based
     #         on IMAGE_MIN_DIM and IMAGE_MIN_SCALE, then picks a random crop of
     #         size IMAGE_MIN_DIM x IMAGE_MIN_DIM. Can be used in training only.
     #         IMAGE_MAX_DIM is not used in this mode.
+
+
     IMAGE_RESIZE_MODE = "square"
     IMAGE_MIN_DIM = 800
     IMAGE_MAX_DIM = 1024
@@ -167,11 +171,12 @@ class Config(object):
     # Non-maximum suppression threshold for detection
     DETECTION_NMS_THRESHOLD = 0.3
 
-    # Learning rate and momentum
+    # Learning rate and momentum动量
     # The Mask RCNN paper uses lr=0.02, but on TensorFlow it causes
     # weights to explode. Likely due to differences in optimizer
     # implementation.
     LEARNING_RATE = 0.001
+    # 梯度下降法中的一种常用的加速技术 总能得到很好的收敛速度
     LEARNING_MOMENTUM = 0.9
 
     # Weight decay regularization
@@ -197,10 +202,11 @@ class Config(object):
     # Train or freeze batch normalization layers
     #     None: Train BN layers. This is the normal mode
     #     False: Freeze BN layers. Good when using a small batch size
-    #     True: (don't use). Set layer in training mode even when predicting
+    #     True: (don't use). Set layer in training mode even when predicting---------------------
     TRAIN_BN = False  # Defaulting to False since batch size is often small
 
     # Gradient norm clipping
+    # 梯度爆炸的解决方法
     GRADIENT_CLIP_NORM = 5.0
 
     def __init__(self):
@@ -208,8 +214,9 @@ class Config(object):
         # Effective batch size
         self.BATCH_SIZE = self.IMAGES_PER_GPU * self.GPU_COUNT
 
-        # Input image size
+        # Input image size    规定输出图片的大小 一定是正方形
         if self.IMAGE_RESIZE_MODE == "crop":
+            # 3 repre what ????
             self.IMAGE_SHAPE = np.array([self.IMAGE_MIN_DIM, self.IMAGE_MIN_DIM, 3])
         else:
             self.IMAGE_SHAPE = np.array([self.IMAGE_MAX_DIM, self.IMAGE_MAX_DIM, 3])

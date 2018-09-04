@@ -2,12 +2,8 @@
 Mask R-CNN
 Configurations and data loading code for MS COCO.
 
-Copyright (c) 2017 Matterport, Inc.
-Licensed under the MIT License (see LICENSE for details)
-Written by Waleed Abdulla
-
 ------------------------------------------------------------
-
+训练模型通过网上的图片数据集，以此模型为基础再训练自己的模型
 Usage: import the module (see Jupyter notebooks for examples), or run from
        the command line as such:
 
@@ -32,6 +28,8 @@ import sys
 import time
 import numpy as np
 import imgaug  # https://github.com/aleju/imgaug (pip3 install imgaug)
+# imgaug是一个封装好的用来进行图像augmentation的python库,支持关键点(keypoint)和bounding box一起变换
+
 
 # Download and install the Python COCO tools from https://github.com/waleedka/coco
 # That's a fork from the original https://github.com/pdollar/coco with a bug
@@ -42,7 +40,7 @@ import imgaug  # https://github.com/aleju/imgaug (pip3 install imgaug)
 from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
 from pycocotools import mask as maskUtils
-
+# zipfile是python里用来做zip格式编码的压缩和解压缩的
 import zipfile
 import urllib.request
 import shutil
@@ -81,7 +79,7 @@ class CocoConfig(Config):
     IMAGES_PER_GPU = 2
 
     # Uncomment to train on 8 GPUs (default is 1)
-    # GPU_COUNT = 8
+    GPU_COUNT = 2
 
     # Number of classes (including background)
     NUM_CLASSES = 1 + 80  # COCO has 80 classes
@@ -222,7 +220,7 @@ class CocoDataset(utils.Dataset):
 
         Different datasets use different ways to store masks. This
         function converts the different mask format to one format
-        in the form of a bitmap [height, width, instances].
+        in the form of a bitmap 基于位的映射[height, width, instances].
 
         Returns:
         masks: A bool array of shape [height, width, instance count] with
@@ -239,6 +237,7 @@ class CocoDataset(utils.Dataset):
         annotations = self.image_info[image_id]["annotations"]
         # Build mask of shape [height, width, instance_count] and list
         # of class IDs that correspond to each channel of the mask.
+        # annotation 注释
         for annotation in annotations:
             class_id = self.map_source_class_id(
                 "coco.{}".format(annotation['category_id']))
@@ -282,7 +281,7 @@ class CocoDataset(utils.Dataset):
     def annToRLE(self, ann, height, width):
         """
         Convert annotation which can be polygons, uncompressed RLE to RLE.
-        :return: binary mask (numpy 2D array)
+        return: binary mask (numpy 2D array)
         """
         segm = ann['segmentation']
         if isinstance(segm, list):
@@ -340,10 +339,11 @@ def build_coco_results(dataset, image_ids, rois, class_ids, scores, masks):
 
 
 def evaluate_coco(model, dataset, coco, eval_type="bbox", limit=0, image_ids=None):
-    """Runs official COCO evaluation.
+    """
+    Runs official COCO evaluation.
     dataset: A Dataset object with valiadtion data
     eval_type: "bbox" or "segm" for bounding box or segmentation evaluation
-    limit: if not 0, it's the number of images to use for evaluation
+    limit: if not 0, it's the number of images to use for evaluation -----------------检测几条数据
     """
     # Pick COCO images from the dataset
     image_ids = image_ids or dataset.image_ids
@@ -365,6 +365,7 @@ def evaluate_coco(model, dataset, coco, eval_type="bbox", limit=0, image_ids=Non
 
         # Run detection
         t = time.time()
+        # r=result预测结果 is a list, every item in it is a dictionary
         r = model.detect([image], verbose=0)[0]
         t_prediction += (time.time() - t)
 
@@ -374,6 +375,7 @@ def evaluate_coco(model, dataset, coco, eval_type="bbox", limit=0, image_ids=Non
                                            r["rois"], r["class_ids"],
                                            r["scores"],
                                            r["masks"].astype(np.uint8))
+        # extend 使用一个序列扩展另一个list
         results.extend(image_results)
 
     # Load results. This modifies results with additional attributes.
@@ -419,6 +421,7 @@ if __name__ == '__main__':
                         default=DEFAULT_LOGS_DIR,
                         metavar="/path/to/logs/",
                         help='Logs and checkpoints directory (default=logs/)')
+    # -------------------------------------------------------------------------默认用500张图片来验证模型
     parser.add_argument('--limit', required=False,
                         default=500,
                         metavar="<image count>",
@@ -490,7 +493,7 @@ if __name__ == '__main__':
         dataset_val.prepare()
 
         # Image Augmentation
-        # Right/Left flip 50% of the time
+        # Right/Left flip 50% of the time  水平镜面翻转
         augmentation = imgaug.augmenters.Fliplr(0.5)
 
         # *** This training schedule is an example. Update to your needs ***
@@ -500,7 +503,7 @@ if __name__ == '__main__':
         model.train(dataset_train, dataset_val,
                     learning_rate=config.LEARNING_RATE,
                     epochs=40,
-                    layers='heads',
+                    layers='heads',   # -----------------------------------我的一个难点 选择哪一个层来训练 很厉害的设置
                     augmentation=augmentation)
 
         # Training - Stage 2
