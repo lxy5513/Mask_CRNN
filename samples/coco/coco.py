@@ -168,6 +168,7 @@ class CocoDataset(utils.Dataset):
         if not os.path.exists(dataDir):
             os.makedirs(dataDir)
 
+        import pdb;pdb.set_trace()
         # Download images if not available locally
         if not os.path.exists(imgDir):
             os.makedirs(imgDir)

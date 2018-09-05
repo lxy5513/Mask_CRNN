@@ -5,6 +5,9 @@ logs/
 results/
 temp/
 test/
+*jpg
+*png
+*zip
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
