@@ -24,6 +24,7 @@ Usage: import the module (see Jupyter notebooks for examples), or run from
 """
 
 import os
+import pdb
 import sys
 import time
 import numpy as np
@@ -186,7 +187,6 @@ class CocoDataset(utils.Dataset):
         # print("Will use images in " + imgDir)
 
 
-        import pdb;pdb.set_trace()
         # Setup annotations data paths
         annDir = "{}/annotations".format(dataDir)
         if dataType == "minival":
@@ -384,7 +384,9 @@ def evaluate_coco(model, dataset, coco, eval_type="bbox", limit=0, image_ids=Non
         # extend 使用一个序列扩展另一个list
         results.extend(image_results)
 
+    pdb.set_trace()
     # Load results. This modifies results with additional attributes.
+    # appear the error of unicode is not defined --------------------------------
     coco_results = coco.loadRes(results)
 
     # Evaluate
