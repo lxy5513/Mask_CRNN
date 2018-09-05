@@ -168,21 +168,25 @@ class CocoDataset(utils.Dataset):
         if not os.path.exists(dataDir):
             os.makedirs(dataDir)
 
-        import pdb;pdb.set_trace()
-        # Download images if not available locally
-        if not os.path.exists(imgDir):
-            os.makedirs(imgDir)
-            print("Downloading images to " + imgZipFile + " ...")
-            with urllib.request.urlopen(imgURL) as resp, open(imgZipFile, 'wb') as out:
-                shutil.copyfileobj(resp, out)
-            print("... done downloading.")
-            # ----------------------------------------------------------achieve download then unzip
-            print("Unzipping " + imgZipFile)
-            with zipfile.ZipFile(imgZipFile, "r") as zip_ref:
-                zip_ref.extractall(dataDir)
-            print("... done unzipping")
-        print("Will use images in " + imgDir)
 
+        # Download images if not available locally
+
+
+        # if not os.path.exists(imgDir):
+        #     os.makedirs(imgDir)
+        #     print("Downloading images to " + imgZipFile + " ...")
+        #     with urllib.request.urlopen(imgURL) as resp, open(imgZipFile, 'wb') as out:
+        #         shutil.copyfileobj(resp, out)
+        #     print("... done downloading.")
+        #     # ----------------------------------------------------------achieve download then unzip
+        #     print("Unzipping " + imgZipFile)
+        #     with zipfile.ZipFile(imgZipFile, "r") as zip_ref:
+        #         zip_ref.extractall(dataDir)
+        #     print("... done unzipping")
+        # print("Will use images in " + imgDir)
+
+
+        import pdb;pdb.set_trace()
         # Setup annotations data paths
         annDir = "{}/annotations".format(dataDir)
         if dataType == "minival":
