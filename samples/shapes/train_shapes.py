@@ -18,7 +18,7 @@ import cv2
 import matplotlib
 import matplotlib.pyplot as plt
 # prohibit image display
-matplotlib.use('agg')
+# matplotlib.use('agg')
 
 # Root directory of the project
 ROOT_DIR = os.path.abspath("../../")

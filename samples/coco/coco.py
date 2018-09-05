@@ -175,6 +175,7 @@ class CocoDataset(utils.Dataset):
             with urllib.request.urlopen(imgURL) as resp, open(imgZipFile, 'wb') as out:
                 shutil.copyfileobj(resp, out)
             print("... done downloading.")
+            # ----------------------------------------------------------achieve download then unzip
             print("Unzipping " + imgZipFile)
             with zipfile.ZipFile(imgZipFile, "r") as zip_ref:
                 zip_ref.extractall(dataDir)
@@ -337,11 +338,11 @@ def build_coco_results(dataset, image_ids, rois, class_ids, scores, masks):
             results.append(result)
     return results
 
-
+# ------------------------------------------------------------------------------------查看效果
 def evaluate_coco(model, dataset, coco, eval_type="bbox", limit=0, image_ids=None):
     """
     Runs official COCO evaluation.
-    dataset: A Dataset object with valiadtion data
+    dataset: A Dataset object with valiadtion data------------------------------------什么格式
     eval_type: "bbox" or "segm" for bounding box or segmentation evaluation
     limit: if not 0, it's the number of images to use for evaluation -----------------检测几条数据
     """
