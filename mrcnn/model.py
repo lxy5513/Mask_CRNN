@@ -4,6 +4,7 @@ The main Mask R-CNN model implementation.
 """
 
 import os
+import ipdb
 import random
 import datetime
 import re
@@ -73,7 +74,7 @@ class BatchNorm(KL.BatchNormalization):
 def compute_backbone_shapes(config, image_shape):
     """
     Computes the width and height of each stage of the backbone network.
-    
+
     Returns:
         [N, (height, width)]. Where N is the number of stages
     """
@@ -816,7 +817,7 @@ class DetectionLayer(KE.Layer):
         m = parse_image_meta_graph(image_meta)
         image_shape = m['image_shape'][0]
         window = norm_boxes_graph(m['window'], image_shape[:2])
-        
+
         # Run detection refinement graph on each item in the batch
         detections_batch = utils.batch_slice(
             [rois, mrcnn_class, mrcnn_bbox, window],
@@ -1865,7 +1866,7 @@ class MaskRCNN():
 
         # Image size must be dividable by 2 multiple times
         h, w = config.IMAGE_SHAPE[:2]
-        if h / 2**6 != int(h / 2**6) or w / 2**6 != int(w / 2**6):
+        if h / 2**6 != int(h / 2**6) or w / 2**6 != int(w / 2**6):# 必须是6的倍数
             raise Exception("Image size must be dividable by 2 at least 6 times "
                             "to avoid fractions when downscaling and upscaling."
                             "For example, use 256, 320, 384, 448, 512, ... etc. ")
@@ -1911,7 +1912,7 @@ class MaskRCNN():
         # Build the shared convolutional layers.
         # Bottom-up Layers
         # Returns a list of the last layers of each stage, 5 in total.
-        # Don't create the thead (stage 5), so we pick the 4th item in the list.
+        # Don't create the thead (stage 5), so we pick the 4th item in the list.   --------------feature map abstrct from FPN
         if callable(config.BACKBONE):
             _, C2, C3, C4, C5 = config.BACKBONE(input_image, stage5=True,
                                                 train_bn=config.TRAIN_BN)
@@ -1977,6 +1978,8 @@ class MaskRCNN():
         # and zero padded.
         proposal_count = config.POST_NMS_ROIS_TRAINING if mode == "training"\
             else config.POST_NMS_ROIS_INFERENCE
+
+        # roi 为后面的回归分类作准备，将feature map 中的region proposals预选框分割成k*k(7*7)个单元(bin) 分别采样出四个位置
         rpn_rois = ProposalLayer(
             proposal_count=proposal_count,
             nms_threshold=config.RPN_NMS_THRESHOLD,
@@ -2057,7 +2060,7 @@ class MaskRCNN():
                                      fc_layers_size=config.FPN_CLASSIF_FC_LAYERS_SIZE)
 
             # Detections
-            # output is [batch, num_detections, (y1, x1, y2, x2, class_id, score)] in 
+            # output is [batch, num_detections, (y1, x1, y2, x2, class_id, score)] in
             # normalized coordinates
             detections = DetectionLayer(config, name="mrcnn_detection")(
                 [rpn_rois, mrcnn_class, mrcnn_bbox, input_image_meta])
@@ -2088,6 +2091,7 @@ class MaskRCNN():
         Returns:
             The path of the last checkpoint file
         """
+        #  ipdb.set_trace()
         # Get directory names. Each directory corresponds to a model
         dir_names = next(os.walk(self.model_dir))[1]
         key = self.config.NAME.lower()
@@ -2224,7 +2228,7 @@ class MaskRCNN():
         """
         # Print message on the first call (but not on recursive calls)
         if verbose > 0 and keras_model is None:
-            log("Selecting layers to train")
+            log("---------------------------------------------------Selecting layers to train")
 
         keras_model = keras_model or self.keras_model
 
@@ -2308,7 +2312,7 @@ class MaskRCNN():
         layers: Allows selecting wich layers to train. It can be:
             - A regular expression to match layer names to train
             - One of these predefined values:
-              heads: The RPN, classifier and mask heads of the network
+              heads: The RPN, classifier and mask heads of the network  ----------------------------------若干头层
               all: All the layers
               3+: Train Resnet stage 3 and up
               4+: Train Resnet stage 4 and up
@@ -2325,14 +2329,14 @@ class MaskRCNN():
                     imgaug.augmenters.GaussianBlur(sigma=(0.0, 5.0))
                 ])
 	    custom_callbacks: Optional. Add custom callbacks to be called
-	        with the keras fit_generator method. Must be list of type keras.callbacks. 
+	        with the keras fit_generator method. Must be list of type keras.callbacks.
         no_augmentation_sources: Optional. List of sources to exclude for
             augmentation. A source is string that identifies a dataset and is
             defined in the Dataset class.
         """
         assert self.mode == "training", "Create model in training mode."
 
-        # Pre-defined layer regular expressions
+        # Pre-defined layer regular expressions                 -------------------------------- 非常重要 ！！！！！
         layer_regex = {
             # all layers but the backbone
             "heads": r"(mrcnn\_.*)|(rpn\_.*)|(fpn\_.*)",
@@ -2361,7 +2365,9 @@ class MaskRCNN():
             keras.callbacks.ModelCheckpoint(self.checkpoint_path,
                                             verbose=0, save_weights_only=True),
         ]
-	
+
+        print('TensorBoard -----------------------------------------> ', self.log_dir)
+
         # Add custom callbacks to the list
         if custom_callbacks:
             callbacks += custom_callbacks
@@ -2388,7 +2394,7 @@ class MaskRCNN():
             callbacks=callbacks,
             validation_data=val_generator,
             validation_steps=self.config.VALIDATION_STEPS,
-            max_queue_size=100,
+            max_queue_size=100, # ----------------------------------------------------------??????
             workers=workers,
             use_multiprocessing=True,
         )

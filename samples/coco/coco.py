@@ -30,7 +30,13 @@ import time
 import numpy as np
 import imgaug  # https://github.com/aleju/imgaug (pip3 install imgaug)
 # imgaug是一个封装好的用来进行图像augmentation的python库,支持关键点(keypoint)和bounding box一起变换
+import skimage
 
+
+import sys
+mrcnn_path = '/home/ferryliu/code/Mask_CRNN'
+sys.path.append(mrcnn_path)
+from mrcnn import visualize
 
 # Download and install the Python COCO tools from https://github.com/waleedka/coco
 # That's a fork from the original https://github.com/pdollar/coco with a bug
@@ -45,6 +51,9 @@ from pycocotools import mask as maskUtils
 import zipfile
 import urllib.request
 import shutil
+
+
+import matplotlib.pyplot as plt
 
 # Root directory of the project
 ROOT_DIR = os.path.abspath("../../")
@@ -313,6 +322,29 @@ class CocoDataset(utils.Dataset):
         return m
 
 
+#  -------------------------------------------------------fill colors
+def color_splash(image, mask):
+    """Apply color splash effect.
+    image: RGB image [height, width, 3]
+    mask: instance segmentation mask [height, width, instance count]
+
+    Returns result image.
+    """
+    # Make a grayscale copy of the image. The grayscale copy still
+    # has 3 RGB channels, though.
+    gray = skimage.color.gray2rgb(skimage.color.rgb2gray(image)) * 255
+    # Copy color pixels from the original color image where mask is set
+    if mask.shape[-1] > 0:
+        # We're treating all instances as one, so collapse the mask into one layer
+        mask = (np.sum(mask, -1, keepdims=True) >= 1)
+        splash = np.where(mask, image, gray).astype(np.uint8)
+    else:
+        splash = gray.astype(np.uint8)
+    return splash
+
+
+
+
 ############################################################
 #  COCO Evaluation
 ############################################################
@@ -369,11 +401,70 @@ def evaluate_coco(model, dataset, coco, eval_type="bbox", limit=0, image_ids=Non
         # Load image
         image = dataset.load_image(image_id)
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        path = './image/'
+        origin_path = path + '{}_origin.png'.format(i)
+        splash_path = path + '{}_splash.png'.format(i)
+
+        r = model.detect([image], verbose=0)[0]
+        # r--------------------------dict_keys(['masks', 'rois', 'class_ids', 'scores'])
+        # splash = color_splash(image, r['masks'])
+        # skimage.io.imsave(origin_path, image)
+        # skimage.io.imsave(splash_path, splash)
+
+        visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'], dataset.class_names, r['scores'], show_bbox=False
+                                    , show_mask=False, title='Pred')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         # Run detection
         t = time.time()
         # r=result预测结果 is a list, every item in it is a dictionary
         r = model.detect([image], verbose=0)[0]
+        # ------------------------------------------detectd image, but how to show it
+
         t_prediction += (time.time() - t)
+
 
         # Convert results to COCO format
         # Cast masks to uint8 because COCO tools errors out on bool
@@ -384,7 +475,6 @@ def evaluate_coco(model, dataset, coco, eval_type="bbox", limit=0, image_ids=Non
         # extend 使用一个序列扩展另一个list
         results.extend(image_results)
 
-    pdb.set_trace()
     # Load results. This modifies results with additional attributes.
     # appear the error of unicode is not defined --------------------------------
     coco_results = coco.loadRes(results)

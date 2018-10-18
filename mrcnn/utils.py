@@ -102,7 +102,7 @@ def compute_overlaps_masks(masks1, masks2):
     """Computes IoU overlaps between two sets of masks.
     masks1, masks2: [Height, Width, instances]
     """
-    
+
     # If either set of masks is empty return empty result
     if masks1.shape[0] == 0 or masks2.shape[0] == 0:
         return np.zeros((masks1.shape[0], masks2.shape[-1]))
@@ -315,7 +315,7 @@ class Dataset(object):
         self.num_images = len(self.image_info)
         self._image_ids = np.arange(self.num_images)
 
-        # Mapping from source class and image IDs to internal IDs
+        # Mapping from source class and image IDs to internal IDs-----------------干嘛用的？
         self.class_from_source_map = {"{}.{}".format(info['source'], info['id']): id
                                       for info, id in zip(self.class_info, self.class_ids)}
         self.image_from_source_map = {"{}.{}".format(info['source'], info['id']): id
@@ -373,7 +373,8 @@ class Dataset(object):
     def load_image(self, image_id):
         """Load the specified image and return a [H,W,3] Numpy array.
         """
-        # Load image
+        # Load imagei-----------------------------------------------how find out image
+        # import pdb;pdb.set_trace()
         image = skimage.io.imread(self.image_info[image_id]['path'])
         # If grayscale. Convert to RGB for consistency.
         if image.ndim != 3:
@@ -777,7 +778,7 @@ def compute_ap_range(gt_box, gt_class_id, gt_mask,
     """Compute AP over a range or IoU thresholds. Default range is 0.5-0.95."""
     # Default is 0.5 to 0.95 with increments of 0.05
     iou_thresholds = iou_thresholds or np.arange(0.5, 1.0, 0.05)
-    
+
     # Compute AP over range of IoU thresholds
     AP = []
     for iou_threshold in iou_thresholds:
