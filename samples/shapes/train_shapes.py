@@ -180,6 +180,7 @@ class ShapesDataset(utils.Dataset):
     def load_mask(self, image_id):
         """Generate instance masks for shapes of the given image ID.
         """
+        ipdb.set_trace()
         info = self.image_info[image_id]
         shapes = info['shapes']
         count = len(shapes)
