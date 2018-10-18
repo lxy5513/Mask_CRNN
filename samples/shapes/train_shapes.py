@@ -180,7 +180,6 @@ class ShapesDataset(utils.Dataset):
     def load_mask(self, image_id):
         """Generate instance masks for shapes of the given image ID.
         """
-        ipdb.set_trace()
         info = self.image_info[image_id]
         shapes = info['shapes']
         count = len(shapes)
@@ -189,6 +188,8 @@ class ShapesDataset(utils.Dataset):
             mask[:, :, i:i+1] = self.draw_shape(mask[:, :, i:i+1].copy(),
                                                 shape, dims, 1)
         # Handle occlusions
+        # 行人检测中，普遍的方法是利用先前训练的分类器在图像中以sliding window进行扫描。有很多方法针对分类器所采用的特征以及对分类器进行改进以提高检测精度。然而，slicing window在检测的过程中会产生重叠的部分，因此需要采用非极大值抑制来消除错误的检测。 
+        # 遮挡面
         occlusion = np.logical_not(mask[:, :, -1]).astype(np.uint8)
         for i in range(count-2, -1, -1):
             mask[:, :, i] = mask[:, :, i] * occlusion
@@ -319,7 +320,6 @@ elif init_with == "last":
 # Passing layers="heads" freezes all layers except the head
 # layers. You can also pass a regular expression to select
 # which layers to train by name pattern.
-'''
 print('==============================before train heads layers at 5 epochs')
 consume_time()
 model.train(dataset_train, dataset_val,
@@ -339,18 +339,17 @@ model.train(dataset_train, dataset_val,
             epochs=1,
             layers="all")
 print('==============================after train all layers at 5 epochs')
-'''
 consume_time()
 
 # Save weights
 # Typically not needed because callbacks save after every epoch
 # Uncomment to save manually
-model_path = os.path.join(MODEL_DIR, "mask_rcnn_shapes.h5")
+#  model_path = os.path.join(MODEL_DIR, "mask_rcnn_shapes.h5")
 #  ipdb.set_trace()
-model.keras_model.save_weights(model_path)
+#  model.keras_model.save_weights(model_path)
 
 
-ipdb.set_trace()
+#  ipdb.set_trace()
 # ## Detection
 class InferenceConfig(ShapesConfig):
     GPU_COUNT = 1
