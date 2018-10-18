@@ -2,10 +2,10 @@
 # coding: utf-8
 
 # # Mask R-CNN - Train on Shapes Dataset
-# 
+#
 # This notebook shows how to train Mask R-CNN on your own dataset. To keep things simple we use a synthetic dataset of shapes (squares, triangles, and circles) which enables fast training. You'd still need a GPU, though, because the network backbone is a Resnet101, which would be too slow to train on a CPU. On a GPU, you can start to get okay-ish results in a few minutes, and good results in less than an hour.
-# 
-# The code of the *Shapes* dataset is included below. It generates images on the fly, so it doesn't require downloading any data. And it can generate images of any size, so we pick a small image size to train faster. 
+#
+# The code of the *Shapes* dataset is included below. It generates images on the fly, so it doesn't require downloading any data. And it can generate images of any size, so we pick a small image size to train faster.
 
 import os
 import sys
@@ -17,6 +17,8 @@ import numpy as np
 import cv2
 import matplotlib
 import matplotlib.pyplot as plt
+import  ipdb
+import time
 # prohibit image display
 # matplotlib.use('agg')
 
@@ -41,6 +43,20 @@ COCO_MODEL_PATH = os.path.join(ROOT_DIR, "mask_rcnn_coco.h5")
 # Download COCO trained weights from Releases if needed
 if not os.path.exists(COCO_MODEL_PATH):
     utils.download_trained_weights(COCO_MODEL_PATH)
+
+
+start_time = time.time()
+def consume_time():
+    end_time = time.time()
+    interval = end_time - start_time
+    seconds = interval
+    if seconds > 60:
+        minutes = int(seconds/60)
+        seconds = seconds % 60
+        seconds = round(seconds, 2)
+        print("耗时 {} 分 {} 秒".format(minutes, seconds))
+    else:
+        print("耗时 {} 秒".format(round(seconds, 2)))
 
 
 # ## Configurations
@@ -80,7 +96,7 @@ class ShapesConfig(Config):
     # use small validation steps since the epoch is small
     # ??????????????????????????????????
     VALIDATION_STEPS = 5
-    
+
 config = ShapesConfig()
 config.display()
 
@@ -89,7 +105,7 @@ def get_ax(rows=1, cols=1, size=8):
     """Return a Matplotlib Axes(轴线) array to be used in
     all visualizations in the notebook. Provide a
     central point to control graph sizes.
-    
+
     Change the default size attribute to control the size
     of rendered images
     """
@@ -242,7 +258,7 @@ class ShapesDataset(utils.Dataset):
 
 
 
-# Training dataset ---------------------------------训练的那一步在哪呢？？？？？？？？
+# Training dataset ---------------------------------训练的那一步
 dataset_train = ShapesDataset()
 dataset_train.load_shapes(500, config.IMAGE_SHAPE[0], config.IMAGE_SHAPE[1])
 dataset_train.prepare()
@@ -254,12 +270,12 @@ dataset_val.prepare()
 
 
 
-# Load and display random samples
+# Load and display random samples  随便选4个image对应的id   展示image
 image_ids = np.random.choice(dataset_train.image_ids, 4)
 for image_id in image_ids:
     image = dataset_train.load_image(image_id)
     mask, class_ids = dataset_train.load_mask(image_id)
-    visualize.display_top_masks(image, mask, class_ids, dataset_train.class_names)
+    #  visualize.display_top_masks(image, mask, class_ids, dataset_train.class_names)
 
 
 # ## Ceate Model
@@ -270,7 +286,7 @@ model = modellib.MaskRCNN(mode="training", config=config,
 
 
 # Which weights to start with?
-init_with = "coco"  # imagenet, coco, or last
+init_with = "last"  # imagenet, coco, or last
 
 if init_with == "imagenet":
     model.load_weights(model.get_imagenet_weights(), by_name=True)
@@ -278,12 +294,14 @@ elif init_with == "coco":
     # Load weights trained on MS COCO, but skip layers that
     # are different due to the different number of classes
     # See README for instructions to download the COCO weights
+    # exclude 排除那些层
     model.load_weights(COCO_MODEL_PATH, by_name=True,
-                       exclude=["mrcnn_class_logits", "mrcnn_bbox_fc", 
+                       exclude=["mrcnn_class_logits", "mrcnn_bbox_fc",
                                 "mrcnn_bbox", "mrcnn_mask"])
 elif init_with == "last":
     # Load the last model you trained and continue training
-    model.load_weights(model.find_last(), by_name=True)
+    #  model.load_weights(model.find_last(), by_name=True)
+    pass
 
 
 # ## Training
@@ -300,31 +318,39 @@ elif init_with == "last":
 # Passing layers="heads" freezes all layers except the head
 # layers. You can also pass a regular expression to select
 # which layers to train by name pattern.
-model.train(dataset_train, dataset_val, 
-            learning_rate=config.LEARNING_RATE, 
-            epochs=1, 
+'''
+print('==============================before train heads layers at 5 epochs')
+consume_time()
+model.train(dataset_train, dataset_val,
+            learning_rate=config.LEARNING_RATE,
+            epochs=1,
             layers='heads')
 
+print('==============================after train heads layers at 5 epochs')
+consume_time()
 
 #------------------------------------------------------------ Fine tune all layers
-# Passing layers="all" trains all layers. You can also 
+# Passing layers="all" trains all layers. You can also
 # pass a regular expression to select which layers to
 # train by name pattern.
-model.train(dataset_train, dataset_val, 
+model.train(dataset_train, dataset_val,
             learning_rate=config.LEARNING_RATE / 10,
-            epochs=2, 
+            epochs=1,
             layers="all")
-
+print('==============================after train all layers at 5 epochs')
+'''
+consume_time()
 
 # Save weights
 # Typically not needed because callbacks save after every epoch
 # Uncomment to save manually
-# model_path = os.path.join(MODEL_DIR, "mask_rcnn_shapes.h5")
-# model.keras_model.save_weights(model_path)
+model_path = os.path.join(MODEL_DIR, "mask_rcnn_shapes.h5")
+#  ipdb.set_trace()
+model.keras_model.save_weights(model_path)
 
 
+ipdb.set_trace()
 # ## Detection
-
 class InferenceConfig(ShapesConfig):
     GPU_COUNT = 1
     IMAGES_PER_GPU = 1
@@ -332,14 +358,15 @@ class InferenceConfig(ShapesConfig):
 inference_config = InferenceConfig()
 
 # Recreate the model in inference mode
-model = modellib.MaskRCNN(mode="inference", 
+model = modellib.MaskRCNN(mode="inference",
                           config=inference_config,
                           model_dir=MODEL_DIR)
 
 # Get path to saved weights
 # Either set a specific path or find last trained weights
-# model_path = os.path.join(ROOT_DIR, ".h5 file name here")
-model_path = model.find_last()
+#  ipdb.set_trace()
+model_path = os.path.join(ROOT_DIR, "mask_rcnn_shapes.h5")
+#  model_path = model.find_last()
 
 # Load trained weights
 print("Loading weights from ", model_path)
@@ -357,14 +384,14 @@ log("gt_class_id", gt_class_id)
 log("gt_bbox", gt_bbox)
 log("gt_mask", gt_mask)
 
-visualize.display_instances(original_image, gt_bbox, gt_mask, gt_class_id, 
+visualize.display_instances(original_image, gt_bbox, gt_mask, gt_class_id,
                             dataset_train.class_names, figsize=(8, 8))
 
 
 results = model.detect([original_image], verbose=1)
 
 r = results[0]
-visualize.display_instances(original_image, r['rois'], r['masks'], r['class_ids'], 
+visualize.display_instances(original_image, r['rois'], r['masks'], r['class_ids'],
                             dataset_val.class_names, r['scores'], ax=get_ax())
 
 
@@ -386,6 +413,6 @@ for image_id in image_ids:
     AP, precisions, recalls, overlaps =        utils.compute_ap(gt_bbox, gt_class_id, gt_mask,
                          r["rois"], r["class_ids"], r["scores"], r['masks'])
     APs.append(AP)
-    
+
 print("mAP: ", np.mean(APs))
 

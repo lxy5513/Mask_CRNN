@@ -4,9 +4,6 @@ Configurations and data loading code for the synthetic Shapes dataset.
 This is a duplicate of the code in the noteobook train_shapes.ipynb for easy
 import into other notebooks, such as inspect_model.ipynb.
 
-Copyright (c) 2017 Matterport, Inc.
-Licensed under the MIT License (see LICENSE for details)
-Written by Waleed Abdulla
 """
 
 import os
