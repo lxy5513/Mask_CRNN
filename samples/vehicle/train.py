@@ -46,6 +46,7 @@ class VehicleDataset(utils.Dataset):
             dataset = os.path.join(dataset_dir, 'val_data.json')
 
         # constructor of COCO helper class for reading and visualzing annotations; creat Index
+        print('dataset description in ', dataset)
         vehicle  = COCO(dataset)
         class_ids = sorted(vehicle.getCatIds())
         # annotation中的image_ids映射到image_info中的id
@@ -53,7 +54,7 @@ class VehicleDataset(utils.Dataset):
         for id in class_ids:
             image_ids.extend(list(vehicle.getImgIds(catIds=[id])))
         #remove duplicates
-        image_id = list(set(images_ids))
+        image_ids = list(set(image_ids))
         # or image_id = list(vehicle.imgs.keys())
 
         # Add classes
@@ -67,7 +68,7 @@ class VehicleDataset(utils.Dataset):
             image_dir = '/home/ferryliu/code/CV/Mask_CRNN/samples/coco/val2014'
         for i in image_ids:
             self.add_image('vehicle',i,
-                        path=os.patimage_id.join(image_dir, vehicle.imgs[i]['file_name']),
+                        path=os.path.join(image_dir, vehicle.imgs[i]['file_name']),
                         width=vehicle.imgs[i]['width'],
                         height=vehicle.imgs[i]['height'],
                         #  annotations=vehicle.loadAnns(vehicle.getAnnIds(imgIds=[i], catIds=class_ids, catIds=None ))
@@ -78,7 +79,10 @@ class VehicleDataset(utils.Dataset):
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='train mask rcnn on vehicle dataset')
-    parser.add_argument('--dataset', required=False)
+    parser.add_argument('--dataset', required=False,
+                        default="/home/ferryliu/code/CV/Mask_CRNN/samples/vehicle/annotations",
+                        help='the directory of dataset description'
+                        )
     parser.add_argument('--model',required=False,
                         default='last',
                         help='last or coco')
@@ -90,9 +94,9 @@ if __name__ == '__main__':
     config.display()
 
     # create model
-    pdb()
     model = modellib.MaskRCNN(mode='training',config=config, model_dir=args.logs)
 
+    args.model = 'coco'
     if args.model.lower() == 'last':
         model_path = model.find_last()
         # Load MODEL
@@ -109,9 +113,9 @@ if __name__ == '__main__':
     dataset_train.load_vehicle(args.dataset, 'train')
     dataset_train.prepare()
 
-    datasel_val =VehicleDataset()
-    datasel_val.load_vehicle(args.dataset, 'train')
-    datasel_val.prepare()
+    dataset_val =VehicleDataset()
+    dataset_val.load_vehicle(args.dataset, 'val')
+    dataset_val.prepare()
 
     #Image augmentation right/left flip 0.5
     augmentation = imgaug.augmenters.Fliplr(0.50)

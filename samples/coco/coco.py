@@ -24,7 +24,7 @@ Usage: import the module (see Jupyter notebooks for examples), or run from
 """
 
 import os
-import pdb
+import ipdb
 import sys
 import time
 import numpy as np
@@ -32,9 +32,10 @@ import imgaug  # https://github.com/aleju/imgaug (pip3 install imgaug)
 # imgaug是一个封装好的用来进行图像augmentation的python库,支持关键点(keypoint)和bounding box一起变换
 import skimage
 
+pdb=ipdb.set_trace
 
 import sys
-mrcnn_path = '/home/ferryliu/code/Mask_CRNN'
+mrcnn_path = '/home/ferryliu/code/CV/Mask_CRNN'
 sys.path.append(mrcnn_path)
 from mrcnn import visualize
 
@@ -51,7 +52,6 @@ from pycocotools import mask as maskUtils
 import zipfile
 import urllib.request
 import shutil
-
 
 import matplotlib.pyplot as plt
 
@@ -76,13 +76,13 @@ DEFAULT_DATASET_YEAR = "2014"
 ############################################################
 
 
-class CocoConfig(Config):
+class VehicleConfig(Config):
     """Configuration for training on MS COCO.
     Derives from the base Config class and overrides values specific
     to the COCO dataset.
     """
     # Give the configuration a recognizable name
-    NAME = "coco"
+    NAME = "vehicle"
 
     # We use a GPU with 12GB memory, which can fit two images.
     # Adjust down if you use a smaller GPU.
@@ -92,7 +92,7 @@ class CocoConfig(Config):
     GPU_COUNT = 2
 
     # Number of classes (including background)
-    NUM_CLASSES = 1 + 80  # COCO has 80 classes
+    NUM_CLASSES = 1 + 9 # COCO has 10 classes
 
 
 ############################################################
@@ -116,11 +116,19 @@ class CocoDataset(utils.Dataset):
         if auto_download is True:
             self.auto_download(dataset_dir, subset, year)
 
-        coco = COCO("{}/annotations/instances_{}{}.json".format(dataset_dir, subset, year))
+        #  coco = COCO("{}/annotations/instances_{}{}.json".format(dataset_dir, subset, year))
+
+        if subset == 'val':
+            dataset_dir = '/home/ferryliu/code/CV/Mask_CRNN/samples/coco/annotations/val_data.json'
+        else:
+            dataset_dir = "/home/ferryliu/code/CV/Mask_CRNN/samples/coco/annotations/train_data.json"
+        coco = COCO(dataset_dir)
+
         if subset == "minival" or subset == "valminusminival":
             subset = "val"
         image_dir = "{}/{}{}".format(dataset_dir, subset, year)
 
+        image_dir = '/home/ferryliu/code/CV/Mask_CRNN/samples/coco/val2014'
         # Load all classes or a subset?
         if not class_ids:
             # All classes
@@ -162,6 +170,7 @@ class CocoDataset(utils.Dataset):
             For 2014, use "train", "val", "minival", or "valminusminival"
             For 2017, only "train" and "val" annotations are available
         """
+        dataType='train'
 
         # Setup paths and file names
         if dataType == "minival" or dataType == "valminusminival":
@@ -400,26 +409,6 @@ def evaluate_coco(model, dataset, coco, eval_type="bbox", limit=0, image_ids=Non
     for i, image_id in enumerate(image_ids):
         # Load image
         image = dataset.load_image(image_id)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         path = './image/'
         origin_path = path + '{}_origin.png'.format(i)
         splash_path = path + '{}_splash.png'.format(i)
@@ -432,30 +421,6 @@ def evaluate_coco(model, dataset, coco, eval_type="bbox", limit=0, image_ids=Non
 
         visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'], dataset.class_names, r['scores'], show_bbox=False
                                     , show_mask=False, title='Pred')
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
         # Run detection
         t = time.time()
@@ -504,20 +469,24 @@ if __name__ == '__main__':
         description='Train Mask R-CNN on MS COCO.')
     parser.add_argument("command",
                         metavar="<command>",
-                        help="'train' or 'evaluate' on MS COCO")
-    parser.add_argument('--dataset', required=True,
+                        #  help="'train' or 'evaluate' on MS COCO")
+                        help="'t' or 'e' on MS COCO")
+    parser.add_argument('--dataset', required=False,
+                        default="/home/ferryliu/code/CV/Mask_CRNN/samples/coco",
                         metavar="/path/to/coco/",
                         help='Directory of the MS-COCO dataset')
     parser.add_argument('--year', required=False,
                         default=DEFAULT_DATASET_YEAR,
                         metavar="<year>",
                         help='Year of the MS-COCO dataset (2014 or 2017) (default=2014)')
-    parser.add_argument('--model', required=True,
+    parser.add_argument('--model', required=False,
+                        default="/home/ferryliu/code/CV/Mask_CRNN/mask_rcnn_coco.h5",
                         metavar="/path/to/weights.h5",
                         help="Path to weights .h5 file or 'coco'")
     parser.add_argument('--logs', required=False,
                         default=DEFAULT_LOGS_DIR,
                         metavar="/path/to/logs/",
+                        #  default="../../logs/",
                         help='Logs and checkpoints directory (default=logs/)')
     # -------------------------------------------------------------------------默认用500张图片来验证模型
     parser.add_argument('--limit', required=False,
@@ -538,9 +507,12 @@ if __name__ == '__main__':
     print("Auto Download: ", args.download)
 
     # Configurations
-    if args.command == "train":
-        config = CocoConfig()
+    # train
+    if args.command == "t":
+        args.command = "train"
+        config = VehicleConfig()
     else:
+        args.command = "evaluate"
         class InferenceConfig(CocoConfig):
             # Set batch size to 1 since we'll be running inference on
             # one image at a time. Batch size = GPU_COUNT * IMAGES_PER_GPU
@@ -570,9 +542,10 @@ if __name__ == '__main__':
     else:
         model_path = args.model
 
-    # Load weights
+    #  # Load weights
     print("Loading weights ", model_path)
-    model.load_weights(model_path, by_name=True)
+    ipdb.set_trace()
+    model.load_weights(model_path, by_name=True, exclude=["mrcnn_class_logits","mrcc_bbox_fc","mrcc_bbox","mrcc_mask"])
 
     # Train or evaluate
     if args.command == "train":
@@ -586,7 +559,8 @@ if __name__ == '__main__':
 
         # Validation dataset
         dataset_val = CocoDataset()
-        val_type = "val" if args.year in '2017' else "minival"
+        val_type = "val"
+        #  val_type = "val" if args.year in '2017' else "minival"
         dataset_val.load_coco(args.dataset, val_type, year=args.year, auto_download=args.download)
         dataset_val.prepare()
 
@@ -598,10 +572,11 @@ if __name__ == '__main__':
 
         # Training - Stage 1
         print("Training network heads")
+        ipdb.set_trace()
         model.train(dataset_train, dataset_val,
                     learning_rate=config.LEARNING_RATE,
                     epochs=40,
-                    layers='heads',   # -----------------------------------我的一个难点 选择哪一个层来训练 很厉害的设置
+                    layers='heads',   # -----------------------------------我的一个难点 选择多个head layers to train
                     augmentation=augmentation)
 
         # Training - Stage 2
@@ -624,6 +599,7 @@ if __name__ == '__main__':
 
     elif args.command == "evaluate":
         # Validation dataset
+        pdb(context=6)
         dataset_val = CocoDataset()
         val_type = "val" if args.year in '2017' else "minival"
         coco = dataset_val.load_coco(args.dataset, val_type, year=args.year, return_coco=True, auto_download=args.download)
